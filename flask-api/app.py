@@ -10,9 +10,13 @@ import joblib
 app = Flask(__name__)
 CORS(app)
 
-# Load your model and PCA
+# ✅ Load model and PCA once
 svm_model = joblib.load('hand_svm_model.pkl')
 pca = joblib.load('pca_transform.pkl')
+
+# ✅ Initialize Mediapipe Hands once
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.7)
 
 # ✅ Landmark Normalization Function
 def normalize_landmarks(X):
@@ -31,8 +35,9 @@ def extract_landmarks_from_image(image_bytes):
     np_array = np.frombuffer(image_bytes, np.uint8)
     frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
-    mp_hands = mp.solutions.hands
-    hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.7)
+    # ✅ Resize to smaller size to reduce processing time
+    frame = cv2.resize(frame, (640, 480))
+
     results = hands.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
     if not results.multi_hand_landmarks:
@@ -70,11 +75,15 @@ def predict():
                 return jsonify({'error': 'Invalid base64 image format'}), 400
 
         elif camera_type == 'ip':
-            response = requests.get(image_data)
-            if response.status_code == 200:
-                image_bytes = response.content
-            else:
-                return jsonify({'error': 'Failed to fetch image from IP camera'}), 400
+            try:
+                response = requests.get(image_data, timeout=3)  # ✅ Add timeout
+                if response.status_code == 200:
+                    image_bytes = response.content
+                else:
+                    return jsonify({'error': 'Failed to fetch image from IP camera'}), 400
+            except requests.exceptions.Timeout:
+                return jsonify({'error': 'IP camera request timed out'}), 408
+
         else:
             return jsonify({'error': 'Unknown camera type'}), 400
 
@@ -87,4 +96,4 @@ def predict():
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, threaded=True)  # ✅ Enable threaded requests

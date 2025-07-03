@@ -1,51 +1,130 @@
+/* General Styling */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to right, #e6ffe6, #ffffff);
+  color: #333;
+  height: 100vh;
+}
+
 .app {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: center;
-  padding: 20px;
-  font-family: Arial, sans-serif;
-  background-color: #f0f4f8;
   min-height: 100vh;
+  padding: 20px;
 }
 
-h1 {
-  color: #333;
+.app-title {
+  color: limegreen;
+  margin-bottom: 40px;
+  font-size: 3rem;
+}
+
+/* Home Page Buttons */
+.home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: fadeIn 0.5s forwards;
+}
+
+.nav-button,
+.highlight-button,
+.camera-selection button,
+.buttons button {
+  background-color: white;
+  color: limegreen;
+  border: 2px solid limegreen;
+  padding: 15px 40px;
+  margin: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.highlight-button {
+  background-color: limegreen;
+  color: white;
+  font-weight: bold;
+}
+
+button:hover {
+  transform: scale(1.05);
+  background-color: #ccffcc;
+}
+
+/* Camera Input Section */
+.camera-selection,
+.ip-setup,
+.buttons,
+.caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.ip-setup input {
+  padding: 12px;
+  width: 320px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* Webcam View */
+.webcam-container {
+  margin-top: 20px;
 }
 
 .webcam {
   width: 640px;
   height: 480px;
-  border: 2px solid #333;
-  margin: 20px 0;
+  border: 3px solid limegreen;
+  border-radius: 10px;
 }
 
-.buttons {
-  margin-bottom: 20px;
-}
-
-button {
-  padding: 10px 20px;
-  font-size: 16px;
-  cursor: pointer;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-
-.caption {
-  text-align: center;
-}
-
+/* Caption Display */
 .caption h2 {
-  margin-bottom: 10px;
+  color: limegreen;
 }
 
 .caption p {
-  font-size: 20px;
-  color: #555;
+  font-size: 1.8rem;
+  margin-top: 10px;
+}
+
+/* Loader/Spinner */
+.loader {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid limegreen;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Page Transitions */
+.home, .detection {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
