@@ -11,8 +11,8 @@ app = Flask(__name__)
 CORS(app)
 
 # ✅ Load model and PCA once
-svm_model = joblib.load('hand_svm_model.pkl')
-pca = joblib.load('pca_transform.pkl')
+svm_model = joblib.load('hand_svm_model3.pkl')
+pca = joblib.load('pca_transform3.pkl')
 
 # ✅ Initialize Mediapipe Hands once
 mp_hands = mp.solutions.hands
@@ -96,4 +96,4 @@ def predict():
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True)  # ✅ Enable threaded requests
+    app.run(debug=True, threaded=True) 
