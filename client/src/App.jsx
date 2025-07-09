@@ -7,7 +7,6 @@ function App() {
   const [caption, setCaption] = useState('');
   const [cameraType, setCameraType] = useState('');
   const [ipCameraUrl, setIpCameraUrl] = useState('');
-  const [isDetecting, setIsDetecting] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const webcamRef = useRef(null);
@@ -41,7 +40,7 @@ function App() {
 
   useEffect(() => {
     if (isCapturing) {
-      intervalRef.current = setInterval(capture, 400);
+      intervalRef.current = setInterval(capture, 3000); // Capture every 3 seconds
     } else {
       clearInterval(intervalRef.current);
     }
@@ -51,7 +50,6 @@ function App() {
   const resetToHome = () => {
     setIsCapturing(false);
     setCameraType('');
-    setIsDetecting(false);
     setCaption('');
     setIpCameraUrl('');
   };
@@ -60,67 +58,61 @@ function App() {
     <div className="app">
       <h1 className="app-title">NEHU Sign Bank</h1>
 
-      {!isDetecting ? (
+      {!cameraType ? (
         <div className="home">
           <button className="nav-button">Sign Language Tutorial</button>
           <button className="nav-button">Sign Letters</button>
-          <button className="highlight-button" onClick={() => setIsDetecting(true)}>
-            Generate Caption
-          </button>
+          <button className="highlight-button" onClick={() => setCameraType('select')}>Generate Caption</button>
+        </div>
+      ) : cameraType === 'select' ? (
+        <div className="camera-selection">
+          <h3>Select Camera Source:</h3>
+          <button onClick={() => setCameraType('local')}>Use Local Webcam</button>
+          <button onClick={() => setCameraType('ip')}>Use IP Webcam</button>
+          <button onClick={resetToHome}>Back to Home</button>
         </div>
       ) : (
         <div className="detection">
-          {!cameraType ? (
-            <div className="camera-selection">
-              <h3>Select Camera Source:</h3>
-              <button onClick={() => setCameraType('local')}>Use Local Webcam</button>
-              <button onClick={() => setCameraType('ip')}>Use IP Webcam</button>
-              <button onClick={resetToHome}>Back to Home</button>
+          {cameraType === 'ip' && (
+            <div className="ip-setup">
+              <input
+                type="text"
+                placeholder="Enter IP Webcam URL (e.g. http://192.168.x.x:8080)"
+                value={ipCameraUrl}
+                onChange={(e) => setIpCameraUrl(e.target.value)}
+              />
             </div>
-          ) : (
-            <>
-              {cameraType === 'ip' && (
-                <div className="ip-setup">
-                  <input
-                    type="text"
-                    placeholder="Enter IP Webcam URL (e.g. http://192.168.x.x:8080)"
-                    value={ipCameraUrl}
-                    onChange={(e) => setIpCameraUrl(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <div className="webcam-container">
-                {cameraType === 'local' ? (
-                  <Webcam
-                    className="webcam"
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    videoConstraints={{ facingMode: 'user' }}
-                  />
-                ) : (
-                  ipCameraUrl && <img src={`${ipCameraUrl}/video`} alt="IP Camera Feed" className="webcam" />
-                )}
-              </div>
-
-              <div className="buttons">
-                <button onClick={() => setIsCapturing(true)} disabled={isCapturing}>
-                  Start Prediction
-                </button>
-                <button onClick={() => setIsCapturing(false)} disabled={!isCapturing}>
-                  Stop Prediction
-                </button>
-                <button onClick={resetToHome}>Back to Home</button>
-              </div>
-
-              <div className="caption">
-                {loading && <div className="loader"></div>}
-                <h2>Predicted Caption:</h2>
-                <p>{caption}</p>
-              </div>
-            </>
           )}
+
+          <div className="webcam-container">
+            {cameraType === 'local' ? (
+              <Webcam
+                className="webcam"
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                videoConstraints={{ facingMode: 'user' }}
+              />
+            ) : (
+              ipCameraUrl && <img src={`${ipCameraUrl}/video`} alt="IP Camera Feed" className="webcam" />
+            )}
+          </div>
+
+          <div className="buttons">
+            <button onClick={() => setIsCapturing(true)} disabled={isCapturing}>
+              Start Prediction
+            </button>
+            <button onClick={() => setIsCapturing(false)} disabled={!isCapturing}>
+              Stop Prediction
+            </button>
+            <button onClick={resetToHome}>Back to Home</button>
+          </div>
+
+          <div className="caption">
+            {loading && <div className="loader"></div>}
+            <h2>Predicted Caption:</h2>
+            <p>{caption}</p>
+          </div>
         </div>
       )}
     </div>
