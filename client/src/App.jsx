@@ -9,8 +9,21 @@ function App() {
   const [ipCameraUrl, setIpCameraUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [deviceId, setDeviceId] = useState(null);
+  const [devices, setDevices] = useState([]);
   const webcamRef = useRef(null);
   const intervalRef = useRef(null);
+
+  useEffect(() => {
+    navigator.mediaDevices.enumerateDevices()
+      .then(mediaDevices => {
+        const videoDevices = mediaDevices.filter(device => device.kind === 'videoinput');
+        setDevices(videoDevices);
+        if (videoDevices.length > 0) {
+          setDeviceId(videoDevices[0].deviceId);
+        }
+      });
+  }, []);
 
   const capture = useCallback(async () => {
     if (!cameraType) return;
@@ -40,7 +53,7 @@ function App() {
 
   useEffect(() => {
     if (isCapturing) {
-      intervalRef.current = setInterval(capture, 3000); // Capture every 3 seconds
+      intervalRef.current = setInterval(capture, 3000);
     } else {
       clearInterval(intervalRef.current);
     }
@@ -84,34 +97,50 @@ function App() {
             </div>
           )}
 
-          <div className="webcam-container">
-            {cameraType === 'local' ? (
-              <Webcam
-                className="webcam"
-                audio={false}
-                ref={webcamRef}
-                screenshotFormat="image/jpeg"
-                videoConstraints={{ facingMode: 'user' }}
-              />
-            ) : (
-              ipCameraUrl && <img src={`${ipCameraUrl}/video`} alt="IP Camera Feed" className="webcam" />
-            )}
+          {cameraType === 'local' && devices.length > 0 && (
+            <div className="camera-select">
+              <label>Select Camera Device:</label>
+              <select onChange={(e) => setDeviceId(e.target.value)} value={deviceId}>
+                {devices.map((device, index) => (
+                  <option key={index} value={device.deviceId}>{device.label || `Camera ${index + 1}`}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="camera-and-caption">
+            <div className="webcam-container">
+              {cameraType === 'local' && deviceId && (
+                <Webcam
+                  className="webcam"
+                  audio={false}
+                  ref={webcamRef}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={{
+                    deviceId: { exact: deviceId },
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'environment'
+                  }}
+                  style={{ width: '100%', maxWidth: '640px', height: 'auto', backgroundColor: '#000' }}
+                  mirrored={false}
+                />
+              )}
+              {cameraType === 'ip' && ipCameraUrl && (
+                <img src={`${ipCameraUrl}/video`} alt="IP Camera Feed" className="webcam" />
+              )}
+            </div>
+            <div className="caption">
+              {loading && <div className="loader"></div>}
+              <h2>Predicted Caption:</h2>
+              <p>{caption}</p>
+            </div>
           </div>
 
           <div className="buttons">
-            <button onClick={() => setIsCapturing(true)} disabled={isCapturing}>
-              Start Prediction
-            </button>
-            <button onClick={() => setIsCapturing(false)} disabled={!isCapturing}>
-              Stop Prediction
-            </button>
+            <button onClick={() => setIsCapturing(true)} disabled={isCapturing}>Start Prediction</button>
+            <button onClick={() => setIsCapturing(false)} disabled={!isCapturing}>Stop Prediction</button>
             <button onClick={resetToHome}>Back to Home</button>
-          </div>
-
-          <div className="caption">
-            {loading && <div className="loader"></div>}
-            <h2>Predicted Caption:</h2>
-            <p>{caption}</p>
           </div>
         </div>
       )}

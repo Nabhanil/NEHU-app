@@ -10,15 +10,25 @@ import joblib
 app = Flask(__name__)
 CORS(app)
 
-# ✅ Load model and PCA once
-svm_model = joblib.load('hand_svm_model3.pkl')
-pca = joblib.load('pca_transform3.pkl')
+# ✅ Load bundled PCA & SVM for version 6
+bundle = joblib.load('hand_svm_model6.pkl')
+if isinstance(bundle, dict):
+    svm_model = bundle['svc']      # Extract the trained SVM
+    pca       = bundle['pca']      # Extract the PCA transformer
+else:
+    # Fallback if bundle wasn't used; load separately
+    svm_model = joblib.load('hand_svm_model6.pkl')
+    pca       = joblib.load('pca_transform6.pkl')
 
 # ✅ Initialize Mediapipe Hands once
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.7)
+glob_mp_hands = mp.solutions.hands  # type: ignore
+hands = glob_mp_hands.Hands(
+    static_image_mode=True,
+    max_num_hands=1,
+    min_detection_confidence=0.7
+)
 
-# ✅ Landmark Normalization Function
+# ✅ Landmark Normalization
 def normalize_landmarks(X):
     X_norm = np.zeros_like(X)
     for i in range(X.shape[0]):
@@ -30,38 +40,30 @@ def normalize_landmarks(X):
         X_norm[i][21:] = (y_coords - y_min) / (y_max - y_min + 1e-5)
     return X_norm
 
-# ✅ Landmark Extraction Function
+# ✅ Landmark Extraction + Prediction
 def extract_landmarks_from_image(image_bytes):
     np_array = np.frombuffer(image_bytes, np.uint8)
     frame = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
-
-    # ✅ Resize to smaller size to reduce processing time
     frame = cv2.resize(frame, (640, 480))
 
     results = hands.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-
     if not results.multi_hand_landmarks:
         return "No Hand Detected"
 
-    landmarks = results.multi_hand_landmarks[0].landmark
+    lm = results.multi_hand_landmarks[0].landmark
+    x_coords = [pt.x for pt in lm]
+    y_coords = [pt.y for pt in lm]
+    feats = np.array(x_coords + y_coords).reshape(1, -1)
+    feats = normalize_landmarks(feats)
 
-    x_coords = [lm.x for lm in landmarks]
-    y_coords = [lm.y for lm in landmarks]
+    feats_pca = pca.transform(feats)
+    return svm_model.predict(feats_pca)[0]
 
-    features = np.array(x_coords + y_coords).reshape(1, -1)
-    features = normalize_landmarks(features)
-
-    # Apply PCA and predict
-    features_pca = pca.transform(features)
-    prediction = svm_model.predict(features_pca)[0]
-
-    return prediction
-
-# ✅ Prediction Route
+# ✅ Prediction Endpoint
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.get_json()
-    image_data = data.get('image')
+    image_data  = data.get('image')
     camera_type = data.get('camera_type')
 
     if not image_data or not camera_type:
@@ -76,9 +78,9 @@ def predict():
 
         elif camera_type == 'ip':
             try:
-                response = requests.get(image_data, timeout=3)  # ✅ Add timeout
-                if response.status_code == 200:
-                    image_bytes = response.content
+                resp = requests.get(image_data, timeout=3)
+                if resp.status_code == 200:
+                    image_bytes = resp.content
                 else:
                     return jsonify({'error': 'Failed to fetch image from IP camera'}), 400
             except requests.exceptions.Timeout:
@@ -88,7 +90,6 @@ def predict():
             return jsonify({'error': 'Unknown camera type'}), 400
 
         label = extract_landmarks_from_image(image_bytes)
-
         return jsonify({'caption': label})
 
     except Exception as e:
@@ -96,4 +97,4 @@ def predict():
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True) 
+    app.run(debug=True, threaded=True)
